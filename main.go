@@ -1,123 +1,128 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"net/http"
-	"regexp"
-	"strings"
 
+	"github.com/12ain/rmb-uppercase-converter/internal/converter"
 	"github.com/gin-gonic/gin"
 )
 
-// 中文大写数字和单位
-var (
-	digits = []string{"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"}
-	units  = []string{"", "拾", "佰", "仟", "万", "拾", "佰", "仟", "亿"}
-)
+//go:embed static
+var staticFS embed.FS
 
-// ConvertToChinese 金额转大写
-func ConvertToChinese(amount string) (string, error) {
-	// 验证金额格式
-	re := regexp.MustCompile(`^\d+(\.\d{1,2})?$`)
-	if !re.MatchString(amount) {
-		return "", http.ErrBodyNotAllowed
+func buildRouter() *gin.Engine {
+	r := gin.Default()
+
+	sub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		panic(err)
 	}
+	r.StaticFS("/static", http.FS(sub))
 
-	// 分割整数和小数部分
-	var integer, decimal string
-	if strings.Contains(amount, ".") {
-		parts := strings.Split(amount, ".")
-		integer = parts[0]
-		decimal = parts[1]
-		// 补零到两位小数
-		if len(decimal) == 1 {
-			decimal += "0"
-		} else if len(decimal) > 2 {
-			decimal = decimal[:2]
-		}
-	} else {
-		integer = amount
-		decimal = "00"
-	}
+	r.GET("/", func(c *gin.Context) {
+		c.FileFromFS("index.html", http.FS(sub))
+	})
+	r.GET("/docs", func(c *gin.Context) {
+		c.FileFromFS("docs.html", http.FS(sub))
+	})
+	r.GET("/docs/spec", func(c *gin.Context) {
+		c.FileFromFS("swagger.html", http.FS(sub))
+	})
+	r.GET("/openapi.json", func(c *gin.Context) {
+		c.FileFromFS("openapi.json", http.FS(sub))
+	})
 
-	// 处理整数部分
-	var result strings.Builder
-	integerLen := len(integer)
-	if integerLen > 12 { // 最大支持到千亿
-		return "", http.ErrBodyNotAllowed
-	}
+	r.POST("/api/convert", handleConvert)
+	r.POST("/api/convert/reverse", handleReverse)
+	r.POST("/api/convert/verify", handleVerify)
+	r.POST("/api/convert/batch", handleBatch)
 
-	// 处理整数部分转换
-	for i, r := range integer {
-		digit := int(r - '0')
-		pos := integerLen - i - 1
-
-		if digit != 0 {
-			result.WriteString(digits[digit])
-			result.WriteString(units[pos])
-		} else {
-			// 处理零的情况
-			if pos == 4 || pos == 8 { // 万位和亿位
-				result.WriteString(units[pos])
-			}
-			// 避免连续的零
-			if i < integerLen-1 && int(integer[i+1]-'0') != 0 && !strings.HasSuffix(result.String(), "零") {
-				result.WriteString("零")
-			}
-		}
-	}
-
-	// 添加"圆"单位
-	result.WriteString("圆")
-
-	// 处理小数部分
-	if decimal == "00" {
-		result.WriteString("整")
-	} else {
-		result.WriteString("")
-		if decimal[0] != '0' {
-			result.WriteString(digits[int(decimal[0]-'0')] + "角")
-		} else if decimal[1] != '0' {
-			result.WriteString("零")
-		}
-		if decimal[1] != '0' {
-			result.WriteString(digits[int(decimal[1]-'0')] + "分")
-		}
-	}
-
-	return result.String(), nil
+	return r
 }
 
 func main() {
-	r := gin.Default()
+	buildRouter().Run(":8080")
+}
 
-	// 定义静态文件目录
-	r.Static("/static", "./static")
+func handleConvert(c *gin.Context) {
+	var req struct {
+		Amount string `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": string(converter.ErrInvalidFormat), "message": "invalid JSON"})
+		return
+	}
+	chinese, err := converter.Forward(req.Amount)
+	if err != nil {
+		writeConverterError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{"chinese": chinese})
+}
 
-	// API 路由
-	r.POST("/api/convert", func(c *gin.Context) {
-		var request struct {
-			Amount string `json:"amount"`
+func handleReverse(c *gin.Context) {
+	var req struct {
+		Chinese string `json:"chinese"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": string(converter.ErrUnparsableChinese), "message": "invalid JSON"})
+		return
+	}
+	amount, err := converter.Reverse(req.Chinese)
+	if err != nil {
+		writeConverterError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{"amount": amount})
+}
+
+func handleVerify(c *gin.Context) {
+	var req struct {
+		Amount  string `json:"amount"`
+		Chinese string `json:"chinese"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": string(converter.ErrInvalidFormat), "message": "invalid JSON"})
+		return
+	}
+	result, err := converter.Verify(req.Amount, req.Chinese)
+	if err != nil {
+		writeConverterError(c, err)
+		return
+	}
+	c.JSON(200, result)
+}
+
+func handleBatch(c *gin.Context) {
+	var req struct {
+		Amounts []string `json:"amounts"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": string(converter.ErrInvalidFormat), "message": "invalid JSON"})
+		return
+	}
+	results, err := converter.Batch(req.Amounts)
+	if err != nil {
+		writeConverterError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{"results": results})
+}
+
+func writeConverterError(c *gin.Context, err error) {
+	if ce, ok := err.(*converter.ConverterError); ok {
+		status := 400
+		if ce.Code == converter.ErrBatchTooLarge {
+			status = 413
 		}
-
-		if err := c.ShouldBindJSON(&request); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-			return
+		resp := gin.H{"error": string(ce.Code), "message": ce.Message}
+		if ce.At > 0 {
+			resp["at"] = ce.At
 		}
-
-		chinese, err := ConvertToChinese(request.Amount)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount format"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"chinese": chinese})
-	})
-
-	// 首页
-	r.GET("/", func(c *gin.Context) {
-		c.File("./static/index.html")
-	})
-
-	// 启动服务器
-	r.Run(":8080")
+		c.JSON(status, resp)
+		return
+	}
+	c.JSON(500, gin.H{"error": "internal", "message": err.Error()})
 }
