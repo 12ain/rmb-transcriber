@@ -19,20 +19,23 @@ func buildRouter() *gin.Engine {
 	if err != nil {
 		panic(err)
 	}
-	r.StaticFS("/static", http.FS(sub))
 
-	r.GET("/", func(c *gin.Context) {
-		c.FileFromFS("index.html", http.FS(sub))
-	})
-	r.GET("/docs", func(c *gin.Context) {
-		c.FileFromFS("docs.html", http.FS(sub))
-	})
-	r.GET("/docs/spec", func(c *gin.Context) {
-		c.FileFromFS("swagger.html", http.FS(sub))
-	})
-	r.GET("/openapi.json", func(c *gin.Context) {
-		c.FileFromFS("openapi.json", http.FS(sub))
-	})
+	serveFile := func(name, contentType string) gin.HandlerFunc {
+		return func(c *gin.Context) {
+			data, err := staticFS.ReadFile("static/" + name)
+			if err != nil {
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+			c.Data(http.StatusOK, contentType, data)
+		}
+	}
+
+	r.GET("/", serveFile("index.html", "text/html; charset=utf-8"))
+	r.GET("/docs", serveFile("docs.html", "text/html; charset=utf-8"))
+	r.GET("/docs/spec", serveFile("swagger.html", "text/html; charset=utf-8"))
+	r.GET("/openapi.json", serveFile("openapi.json", "application/json"))
+	r.StaticFS("/static", http.FS(sub))
 
 	r.POST("/api/convert", handleConvert)
 	r.POST("/api/convert/reverse", handleReverse)
