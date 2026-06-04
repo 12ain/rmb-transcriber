@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RMB Capital · OpenAPI Reference</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #fafafa; }
+    .topbar-back {
+      position: sticky; top: 0; z-index: 100;
+      background: #1b1b1b; color: #fff;
+      padding: 12px 24px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .topbar-back a { color: #d4ff5e; text-decoration: none; margin-right: 16px; }
+    .topbar-back a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="topbar-back">
+    <a href="/docs">← Docs</a>
+    <a href="/">← Home</a>
+    <span>Swagger UI · /openapi.json</span>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+      });
+    };
+  </script>
+</body>
+</html>
