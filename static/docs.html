@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RMB Capital · API Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@300;400;500&family=Noto+Serif+SC:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/shared/theme.css">
+  <script>
+    (function () {
+      const saved = localStorage.getItem('theme');
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', saved || sys);
+    })();
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.005em;
+      transition: background 0.4s, color 0.4s;
+    }
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      border-right: 1px solid var(--hairline);
+      padding: 32px 24px;
+      background: var(--bg);
+      overflow-y: auto;
+    }
+    .side-logo {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 32px;
+    }
+    .side-logo .mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--accent); color: var(--accent-fg);
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 14px;
+    }
+    .side-logo b { font-size: 14px; letter-spacing: -0.02em; }
+    .side-section {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+      color: var(--muted);
+      margin: 18px 0 8px;
+    }
+    .side-link {
+      display: block; padding: 6px 10px; border-radius: 6px;
+      color: var(--fg-2); text-decoration: none;
+      font-size: 13px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .side-link:hover { background: var(--surface); color: var(--fg); }
+    .side-link.api { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .side-spacer { flex-grow: 1; }
+    .main { padding: 32px 56px 80px; max-width: 980px; }
+    h1 {
+      font-size: 48px; font-weight: 600; letter-spacing: -0.04em;
+      margin-bottom: 12px;
+    }
+    h1 em { color: var(--accent); font-style: normal; font-weight: 700; }
+    .lead { color: var(--fg-2); font-size: 17px; line-height: 1.55; margin-bottom: 48px; max-width: 640px; }
+    h2 {
+      font-size: 28px; font-weight: 600; letter-spacing: -0.03em;
+      margin: 56px 0 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--hairline);
+    }
+    h3 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 500; letter-spacing: 0.04em;
+      margin: 24px 0 10px;
+      color: var(--fg);
+    }
+    p { color: var(--fg-2); line-height: 1.65; margin-bottom: 12px; max-width: 720px; }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+    code { color: var(--accent); background: var(--surface); padding: 2px 6px; border-radius: 4px; }
+    pre {
+      background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: 12px; padding: 18px; overflow-x: auto;
+      line-height: 1.55; color: var(--fg);
+    }
+    pre code { background: none; color: inherit; padding: 0; }
+    table {
+      width: 100%; border-collapse: collapse; margin: 16px 0;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    th {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500; font-size: 11px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    td code { font-size: 12px; }
+    .endpoint-head {
+      display: flex; align-items: center; gap: 12px;
+      margin: 56px 0 8px; padding-top: 16px;
+      border-top: 1px solid var(--hairline);
+    }
+    .method {
+      display: inline-block; padding: 4px 8px; border-radius: 6px;
+      background: var(--accent); color: var(--accent-fg);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    }
+    .endpoint-path {
+      font-family: 'JetBrains Mono', monospace; font-size: 18px;
+      color: var(--fg);
+    }
+    .lang-tabs { display: flex; gap: 4px; margin: 12px 0 8px; }
+    .lang-tab {
+      background: var(--surface); border: 1px solid var(--hairline);
+      color: var(--fg-2); padding: 6px 14px; border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.1em; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .lang-tab.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .try-it {
+      margin-top: 16px; padding: 18px;
+      background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: 12px;
+    }
+    .try-it h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .try-it textarea {
+      width: 100%; min-height: 90px;
+      background: var(--bg); border: 1px solid var(--hairline);
+      border-radius: 8px; padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--fg);
+      resize: vertical; outline: none;
+    }
+    .try-it textarea:focus { border-color: var(--accent); }
+    .try-it-controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+    .try-send {
+      background: var(--accent); color: var(--accent-fg);
+      border: none; padding: 8px 18px; border-radius: 8px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 600; cursor: pointer;
+    }
+    .try-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted); letter-spacing: 0.1em;
+    }
+    .try-response {
+      margin-top: 12px;
+      background: var(--bg); border: 1px solid var(--hairline);
+      border-radius: 8px; padding: 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      max-height: 240px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .top-actions {
+      display: flex; gap: 12px; margin-bottom: 32px;
+    }
+    .top-action {
+      padding: 8px 14px; border: 1px solid var(--hairline-strong);
+      border-radius: 999px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--fg-2); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .top-action:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .main { padding: 24px 20px 56px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-logo"><span class="mark">¥</span><b>RMB Capital · Docs</b></div>
+      <div class="side-section">Guide</div>
+      <a class="side-link" href="#overview">Overview</a>
+      <a class="side-link" href="#errors">Error codes</a>
+      <a class="side-link" href="#reverse-notes">Reverse parsing</a>
+      <div class="side-section">Endpoints</div>
+      <a class="side-link api" href="#ep-convert">POST /api/convert</a>
+      <a class="side-link api" href="#ep-reverse">POST /api/convert/reverse</a>
+      <a class="side-link api" href="#ep-verify">POST /api/convert/verify</a>
+      <a class="side-link api" href="#ep-batch">POST /api/convert/batch</a>
+      <div class="side-section">Spec</div>
+      <a class="side-link" href="/openapi.json" target="_blank">openapi.json ↗</a>
+      <a class="side-link" href="/docs/spec">Swagger UI ↗</a>
+    </aside>
+    <main class="main">
+      <div class="top-actions">
+        <a class="top-action" href="/">← Home</a>
+        <a class="top-action" href="/docs/spec">Swagger UI ↗</a>
+      </div>
+      <h1>API <em>Reference</em></h1>
+      <p class="lead">Convert between Arabic numerals and Chinese capitalised numerals (人民币大写). Four endpoints, no auth, JSON only.</p>
+
+      <section id="overview">
+        <h2>Overview</h2>
+        <p>Base URL: <code>http://localhost:8080</code> (development) — replace with your deployed origin.</p>
+        <p>Authentication: none. All endpoints are open. Rate limiting and API keys are not implemented in v1.</p>
+        <p>Content-Type: <code>application/json</code> for all requests and responses. UTF-8.</p>
+      </section>
+
+      <section id="errors">
+        <h2>Error codes</h2>
+        <p>All errors share one envelope: <code>{ "error": "&lt;code&gt;", "message": "&lt;human readable&gt;", "at": &lt;optional offset&gt; }</code>.</p>
+        <table>
+          <thead><tr><th>HTTP</th><th>code</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>400</code></td><td><code>invalid_format</code></td><td>Amount does not match <code>^-?\d+(\.\d{1,2})?$</code>, or JSON body malformed.</td></tr>
+            <tr><td><code>400</code></td><td><code>out_of_range</code></td><td>Absolute value exceeds 999,999,999,999.99.</td></tr>
+            <tr><td><code>400</code></td><td><code>unparsable_chinese</code></td><td>Chinese capitalised string could not be parsed; <code>at</code> field marks the offset where parsing failed.</td></tr>
+            <tr><td><code>413</code></td><td><code>batch_too_large</code></td><td>Batch contains more than 200 entries.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="reverse-notes">
+        <h2>Reverse parsing behaviour</h2>
+        <p>The reverse and verify endpoints accept either currency unit (圆 or 元) and either terminator (整 or 正) interchangeably. The forward and batch endpoints always emit canonical <code>圆 + 整</code> form (PBOC ledger convention).</p>
+        <p>Negative amounts are supported across all endpoints: a leading <code>-</code> in the numeric form, a leading <code>负</code> in the Chinese form.</p>
+      </section>
+
+      <section id="ep-convert">
+        <div class="endpoint-head">
+          <span class="method">POST</span>
+          <span class="endpoint-path">/api/convert</span>
+        </div>
+        <p>Convert an Arabic numeral amount to Chinese capitalised form.</p>
+
+        <h3>Request</h3>
+        <pre><code>{
+  "amount": "1234.56"
+}</code></pre>
+
+        <h3>Response 200</h3>
+        <pre><code>{
+  "chinese": "壹仟贰佰叁拾肆圆伍角陆分"
+}</code></pre>
+
+        <h3>Code samples</h3>
+        <div class="lang-tabs" data-target="sample-convert">
+          <button class="lang-tab active" data-lang="curl">curl</button>
+          <button class="lang-tab" data-lang="python">Python</button>
+          <button class="lang-tab" data-lang="node">Node</button>
+          <button class="lang-tab" data-lang="go">Go</button>
+        </div>
+        <pre id="sample-convert"><code class="sample" data-lang="curl">curl -X POST http://localhost:8080/api/convert \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":"1234.56"}'</code></pre>
+        <pre style="display:none" data-for="sample-convert"><code class="sample" data-lang="python">import requests
+
+r = requests.post(
+    "http://localhost:8080/api/convert",
+    json={"amount": "1234.56"},
+)
+print(r.json()["chinese"])  # 壹仟贰佰叁拾肆圆伍角陆分</code></pre>
+        <pre style="display:none" data-for="sample-convert"><code class="sample" data-lang="node">const res = await fetch("http://localhost:8080/api/convert", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ amount: "1234.56" }),
+});
+const data = await res.json();
+console.log(data.chinese); // 壹仟贰佰叁拾肆圆伍角陆分</code></pre>
+        <pre style="display:none" data-for="sample-convert"><code class="sample" data-lang="go">package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    body, _ := json.Marshal(map[string]string{"amount": "1234.56"})
+    resp, _ := http.Post("http://localhost:8080/api/convert",
+        "application/json", bytes.NewReader(body))
+    defer resp.Body.Close()
+    var out struct{ Chinese string `json:"chinese"` }
+    json.NewDecoder(resp.Body).Decode(&out)
+    fmt.Println(out.Chinese) // 壹仟贰佰叁拾肆圆伍角陆分
+}</code></pre>
+
+        <div class="try-it">
+          <h4>Try it</h4>
+          <textarea class="try-body" data-path="/api/convert">{"amount":"1234.56"}</textarea>
+          <div class="try-it-controls">
+            <button class="try-send" data-path="/api/convert">Send</button>
+            <span class="try-status"></span>
+          </div>
+          <div class="try-response" hidden></div>
+        </div>
+      </section>
+
+      <section id="ep-reverse">
+        <div class="endpoint-head">
+          <span class="method">POST</span>
+          <span class="endpoint-path">/api/convert/reverse</span>
+        </div>
+        <p>Parse a Chinese capitalised amount back into Arabic numerals. Accepts 圆/元 and 整/正 interchangeably.</p>
+        <h3>Request</h3>
+        <pre><code>{ "chinese": "壹仟贰佰叁拾肆圆伍角陆分" }</code></pre>
+        <h3>Response 200</h3>
+        <pre><code>{ "amount": "1234.56" }</code></pre>
+        <h3>Error 400 (unparsable)</h3>
+        <pre><code>{
+  "error": "unparsable_chinese",
+  "message": "input does not match expected pattern",
+  "at": 0
+}</code></pre>
+        <h3>Sample (curl)</h3>
+        <pre><code>curl -X POST http://localhost:8080/api/convert/reverse \
+  -H 'Content-Type: application/json' \
+  -d '{"chinese":"壹仟元正"}'</code></pre>
+        <div class="try-it">
+          <h4>Try it</h4>
+          <textarea class="try-body" data-path="/api/convert/reverse">{"chinese":"壹仟元正"}</textarea>
+          <div class="try-it-controls">
+            <button class="try-send" data-path="/api/convert/reverse">Send</button>
+            <span class="try-status"></span>
+          </div>
+          <div class="try-response" hidden></div>
+        </div>
+      </section>
+
+      <section id="ep-verify">
+        <div class="endpoint-head">
+          <span class="method">POST</span>
+          <span class="endpoint-path">/api/convert/verify</span>
+        </div>
+        <p>Compare a numeric amount and a Chinese capitalised string. Always returns 200 unless the numeric form itself is invalid.</p>
+        <h3>Request</h3>
+        <pre><code>{
+  "amount": "1234.56",
+  "chinese": "壹仟贰佰叁拾肆圆伍角陆分"
+}</code></pre>
+        <h3>Response 200 (match)</h3>
+        <pre><code>{ "match": true, "expected": "壹仟贰佰叁拾肆圆伍角陆分" }</code></pre>
+        <h3>Response 200 (mismatch)</h3>
+        <pre><code>{
+  "match": false,
+  "expected": "壹仟贰佰叁拾肆圆伍角陆分",
+  "diffAt": 9,
+  "message": ""
+}</code></pre>
+        <div class="try-it">
+          <h4>Try it</h4>
+          <textarea class="try-body" data-path="/api/convert/verify">{"amount":"1234.56","chinese":"壹仟贰佰叁拾肆圆伍角陆分"}</textarea>
+          <div class="try-it-controls">
+            <button class="try-send" data-path="/api/convert/verify">Send</button>
+            <span class="try-status"></span>
+          </div>
+          <div class="try-response" hidden></div>
+        </div>
+      </section>
+
+      <section id="ep-batch">
+        <div class="endpoint-head">
+          <span class="method">POST</span>
+          <span class="endpoint-path">/api/convert/batch</span>
+        </div>
+        <p>Convert up to 200 amounts in one call. Per-item errors are reported inside the results array; the overall request still returns 200. Exceeding 200 entries returns 413.</p>
+        <h3>Request</h3>
+        <pre><code>{
+  "amounts": ["1234.56", "1000", "abc"]
+}</code></pre>
+        <h3>Response 200</h3>
+        <pre><code>{
+  "results": [
+    { "amount": "1234.56", "chinese": "壹仟贰佰叁拾肆圆伍角陆分" },
+    { "amount": "1000",    "chinese": "壹仟圆整" },
+    { "amount": "abc",     "error": "invalid_format", "message": "amount must be a valid number with optional decimals" }
+  ]
+}</code></pre>
+        <h3>Error 413</h3>
+        <pre><code>{
+  "error": "batch_too_large",
+  "message": "batch size exceeds 200"
+}</code></pre>
+        <div class="try-it">
+          <h4>Try it</h4>
+          <textarea class="try-body" data-path="/api/convert/batch">{"amounts":["1234.56","1000","abc"]}</textarea>
+          <div class="try-it-controls">
+            <button class="try-send" data-path="/api/convert/batch">Send</button>
+            <span class="try-status"></span>
+          </div>
+          <div class="try-response" hidden></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    document.querySelectorAll('.lang-tabs').forEach(group => {
+      const target = group.dataset.target;
+      const tabs = group.querySelectorAll('.lang-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          const lang = tab.dataset.lang;
+          const mainBlock = document.getElementById(target);
+          const allBlocks = [mainBlock, ...document.querySelectorAll('[data-for="' + target + '"]')];
+          allBlocks.forEach(b => {
+            const code = b.querySelector('code.sample');
+            if (!code) return;
+            b.style.display = (code.dataset.lang === lang) ? '' : 'none';
+          });
+        });
+      });
+    });
+
+    document.querySelectorAll('.try-send').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const path = btn.dataset.path;
+        const card = btn.closest('.try-it');
+        const body = card.querySelector('.try-body').value;
+        const status = card.querySelector('.try-status');
+        const out = card.querySelector('.try-response');
+        out.hidden = false;
+        status.textContent = 'sending…';
+        const t0 = performance.now();
+        try {
+          const res = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body,
+          });
+          const dt = Math.round(performance.now() - t0);
+          const text = await res.text();
+          let pretty = text;
+          try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (_) {}
+          status.textContent = res.status + ' · ' + dt + 'ms';
+          out.textContent = pretty;
+        } catch (e) {
+          status.textContent = 'failed';
+          out.textContent = String(e);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
