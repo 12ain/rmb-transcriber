@@ -1,1 +1,202 @@
-{"openapi":"3.1.0","info":{"title":"placeholder","version":"0.0.0"},"paths":{}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RMB Capital · Numeral Transcriber API",
+    "version": "1.0.0",
+    "description": "Convert between Arabic numerals and Chinese capitalised numerals (人民币大写) for invoices, contracts, and bank instruments."
+  },
+  "servers": [
+    { "url": "http://localhost:8080", "description": "Local dev" }
+  ],
+  "paths": {
+    "/api/convert": {
+      "post": {
+        "summary": "Convert number → Chinese capitalised form",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ConvertRequest" },
+              "example": { "amount": "1234.56" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConvertResponse" },
+                "example": { "chinese": "壹仟贰佰叁拾肆圆伍角陆分" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/convert/reverse": {
+      "post": {
+        "summary": "Convert Chinese capitalised form → number",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseRequest" },
+              "example": { "chinese": "壹仟贰佰叁拾肆圆伍角陆分" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReverseResponse" },
+                "example": { "amount": "1234.56" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/convert/verify": {
+      "post": {
+        "summary": "Bidirectional consistency check",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyRequest" },
+              "example": { "amount": "1234.56", "chinese": "壹仟贰佰叁拾肆圆伍角陆分" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VerifyResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (invalid amount)",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/convert/batch": {
+      "post": {
+        "summary": "Batch convert up to 200 amounts",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchRequest" },
+              "example": { "amounts": ["1234.56", "1000", "abc"] }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK (per-item errors reported in results array)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BatchResponse" }
+              }
+            }
+          },
+          "413": {
+            "description": "Batch exceeds 200 items",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConvertRequest": {
+        "type": "object", "required": ["amount"],
+        "properties": {
+          "amount": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,2})?$", "description": "0 to 999,999,999,999.99; optional leading minus" }
+        }
+      },
+      "ConvertResponse": {
+        "type": "object", "required": ["chinese"],
+        "properties": { "chinese": { "type": "string" } }
+      },
+      "ReverseRequest": {
+        "type": "object", "required": ["chinese"],
+        "properties": { "chinese": { "type": "string", "description": "Accepts 圆/元 and 整/正 interchangeably" } }
+      },
+      "ReverseResponse": {
+        "type": "object", "required": ["amount"],
+        "properties": { "amount": { "type": "string" } }
+      },
+      "VerifyRequest": {
+        "type": "object", "required": ["amount", "chinese"],
+        "properties": {
+          "amount": { "type": "string" },
+          "chinese": { "type": "string" }
+        }
+      },
+      "VerifyResponse": {
+        "type": "object", "required": ["match", "expected"],
+        "properties": {
+          "match": { "type": "boolean" },
+          "expected": { "type": "string", "description": "Canonical form computed by server" },
+          "diffAt": { "type": "integer", "description": "First differing rune index (mismatch only)" },
+          "message": { "type": "string", "description": "Parse failure detail (mismatch only)" }
+        }
+      },
+      "BatchRequest": {
+        "type": "object", "required": ["amounts"],
+        "properties": {
+          "amounts": { "type": "array", "items": { "type": "string" }, "maxItems": 200 }
+        }
+      },
+      "BatchItem": {
+        "type": "object", "required": ["amount"],
+        "properties": {
+          "amount": { "type": "string" },
+          "chinese": { "type": "string" },
+          "error": { "type": "string", "enum": ["invalid_format", "out_of_range"] },
+          "message": { "type": "string" }
+        }
+      },
+      "BatchResponse": {
+        "type": "object", "required": ["results"],
+        "properties": {
+          "results": { "type": "array", "items": { "$ref": "#/components/schemas/BatchItem" } }
+        }
+      },
+      "Error": {
+        "type": "object", "required": ["error", "message"],
+        "properties": {
+          "error": { "type": "string", "enum": ["invalid_format", "out_of_range", "unparsable_chinese", "batch_too_large"] },
+          "message": { "type": "string" },
+          "at": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
