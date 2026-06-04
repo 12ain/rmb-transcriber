@@ -1,323 +1,943 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人民币大写转换工具</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <title>RMB Capital · 人民币大写转换</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@300;400;500&family=Noto+Serif+SC:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/shared/theme.css">
   <script src="https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.min.js"></script>
-
-  <!-- Tailwind配置 -->
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#165DFF',
-            secondary: '#FF7D00',
-            neutral: '#F5F7FA',
-          },
-          fontFamily: {
-            inter: ['Inter', 'system-ui', 'sans-serif'],
-          },
-        },
-      }
-    }
+    (function () {
+      const saved = localStorage.getItem('theme');
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', saved || sys);
+    })();
   </script>
-
-  <style type="text/tailwindcss">
-    @layer utilities {
-      .content-auto {
-        content-visibility: auto;
-      }
-      .transition-all-300 {
-        transition: all 0.3s ease;
-      }
-      .card-shadow {
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
-      }
+  <style>
+    /* ── RESET ───────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+      min-height: 100vh;
+      letter-spacing: -0.005em;
+      transition: background 0.4s, color 0.4s;
     }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    .container { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAV ─────────────────────────────────────────── */
+    .top-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .nav-left { display: flex; align-items: center; gap: 12px; }
+    .nav-mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--accent); color: var(--accent-fg);
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 18px;
+    }
+    .nav-title {
+      font-size: 15px; font-weight: 600; letter-spacing: -0.02em;
+    }
+    .nav-title small {
+      font-weight: 400; color: var(--muted);
+      margin-left: 8px; font-size: 11px; letter-spacing: 0.18em;
+    }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .docs-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--fg-2); text-decoration: none;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--hairline-strong); transition: all 0.2s;
+    }
+    .docs-link:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+    .theme-toggle {
+      background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: 999px; padding: 6px;
+      cursor: pointer; display: flex; gap: 4px;
+      transition: background 0.3s;
+    }
+    .theme-toggle span {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 14px; transition: all 0.3s;
+      color: var(--muted);
+    }
+    .theme-toggle span.active { background: var(--accent); color: var(--accent-fg); }
+
+    /* ── HERO ────────────────────────────────────────── */
+    .hero { padding: 48px 0 16px; text-align: center; }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 56px); font-weight: 600;
+      letter-spacing: -0.04em;
+    }
+    .hero h1 em { color: var(--accent); font-style: normal; font-weight: 700; }
+    .hero p {
+      color: var(--fg-2); margin-top: 10px;
+      font-size: 15px; line-height: 1.55; max-width: 540px;
+      margin-left: auto; margin-right: auto;
+    }
+
+    /* ── MODE TABS ───────────────────────────────────── */
+    .mode-tabs {
+      margin: 32px 0 32px;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: 16px; padding: 4px;
+      position: relative; backdrop-filter: blur(12px);
+    }
+    .mode-tab {
+      background: transparent; border: none; cursor: pointer;
+      padding: 12px 12px; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      color: var(--muted); transition: color 0.3s;
+      position: relative; z-index: 2;
+    }
+    .mode-tab.active { color: var(--accent-fg); }
+    .mode-tab:not(.active):hover { color: var(--fg-2); }
+    .mode-zh {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 600; font-size: 14px; letter-spacing: 0.18em;
+    }
+    .mode-en {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.75;
+    }
+    .mode-indicator {
+      position: absolute; top: 4px; left: 4px;
+      width: calc(25% - 2px); height: calc(100% - 8px);
+      background: var(--accent); border-radius: 12px;
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 1;
+    }
+
+    /* ── WORKSPACE ───────────────────────────────────── */
+    .workspace {
+      display: grid; grid-template-columns: 1fr 340px;
+      gap: 24px; margin: 0 auto; max-width: 1024px;
+      padding: 0 24px 48px;
+    }
+    @media (max-width: 780px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: 16px; padding: 20px;
+      backdrop-filter: blur(12px);
+    }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .panel-head .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .panel-head .label b { color: var(--fg-2); font-weight: 500; }
+
+    .chip {
+      display: flex; align-items: center; gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: 0.18em;
+      padding: 3px 10px; border-radius: 999px;
+      background: var(--surface-2); color: var(--muted);
+      text-transform: uppercase; transition: all 0.3s;
+    }
+    .chip .d { width: 5px; height: 5px; border-radius: 50%; background: var(--muted-2); }
+    .chip.live { background: var(--accent); color: var(--accent-fg); }
+    .chip.live .d { background: var(--accent-fg); }
+    .chip.ok { background: var(--ok); color: #0a0a0c; }
+    .chip.ok .d { background: #0a0a0c; }
+
+    .result-canvas { min-height: 120px; }
+    .result-empty {
+      padding: 24px 0; text-align: center;
+    }
+    .result-empty .phrase {
+      font-size: 16px; color: var(--fg-2); letter-spacing: -0.01em;
+      line-height: 1.5;
+    }
+    .result-empty .hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted); margin-top: 8px;
+      letter-spacing: 0.08em;
+    }
+
+    .result-foot {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-top: 16px;
+      padding-top: 14px; border-top: 1px solid var(--hairline);
+    }
+    .result-stats { display: flex; gap: 20px; }
+    .stat { display: flex; flex-direction: column; gap: 2px; }
+    .stat .k {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase;
+    }
+    .stat .v {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; color: var(--fg); font-weight: 400;
+    }
+
+    .copy-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface-2); border: 1px solid var(--hairline-strong);
+      border-radius: 999px; padding: 6px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.12em; color: var(--fg-2);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .copy-btn:hover:not(:disabled) { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .copy-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .copy-btn.copied { background: var(--ok); color: #0a0a0c; border-color: var(--ok); }
+    .copy-btn .arrow { font-size: 14px; }
+
+    .right-col { display: flex; flex-direction: column; gap: 24px; }
+
+    .input-wrap {
+      display: flex; align-items: center;
+      background: var(--bg); border: 1px solid var(--hairline-strong);
+      border-radius: 12px; padding: 0 16px; transition: border-color 0.3s;
+    }
+    .input-wrap:focus-within { border-color: var(--accent); }
+    .input-wrap .currency {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; color: var(--muted); margin-right: 8px;
+    }
+    .input-wrap input {
+      flex: 1; background: transparent; border: none;
+      padding: 16px 0; font-family: 'JetBrains Mono', monospace;
+      font-size: 22px; color: var(--fg); outline: none;
+    }
+    .input-wrap input::placeholder { color: var(--muted-2); }
+
+    .input-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted); letter-spacing: 0.08em;
+    }
+    .input-meta .err { color: var(--warn); }
+
+    .convert-btn {
+      width: 100%; display: flex; align-items: center;
+      justify-content: space-between;
+      background: var(--accent); color: var(--accent-fg);
+      border: none; border-radius: 14px;
+      padding: 16px 20px; cursor: pointer;
+      transition: all 0.2s; font-family: 'Bricolage Grotesque', sans-serif;
+    }
+    .convert-btn:hover:not(:disabled) { opacity: 0.88; transform: scale(1.01); }
+    .convert-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .convert-btn .label-en {
+      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.7;
+    }
+    .convert-btn > span:first-child { text-align: left; }
+    .convert-btn .icon { font-size: 22px; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid var(--accent-fg); border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULT NUMBER (forward / reverse) ──────────── */
+    .result-number {
+      font-family: 'Noto Serif SC', serif;
+      font-weight: 500;
+      font-size: clamp(28px, 4vw, 40px);
+      color: var(--fg);
+      line-height: 1.4;
+      letter-spacing: 0.04em;
+      padding: 12px 0;
+      word-break: break-all;
+    }
+
+    /* ── REVERSE ─────────────────────────────────────── */
+    .reverse-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      font-size: clamp(48px, 7vw, 96px);
+      color: var(--fg);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      padding: 16px 0;
+    }
+    .reverse-textarea {
+      width: 100%; background: transparent;
+      border: 1px solid var(--hairline-strong);
+      border-radius: 12px; color: var(--fg);
+      font-family: 'Noto Serif SC', serif;
+      font-size: 18px; letter-spacing: 0.04em;
+      line-height: 1.6; padding: 16px;
+      resize: vertical; outline: none;
+      transition: border-color 0.3s; margin-bottom: 14px;
+    }
+    .reverse-textarea:focus { border-color: var(--accent); }
+    .reverse-textarea::placeholder { color: var(--muted-2); }
+
+    /* ── VERIFY ──────────────────────────────────────── */
+    .verify-match, .verify-mismatch {
+      display: flex; flex-direction: column; gap: 18px; padding: 12px 0;
+    }
+    .verify-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--accent); color: var(--accent-fg);
+      display: grid; place-items: center;
+      font-size: 44px; font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700; box-shadow: 0 0 48px var(--accent-glow);
+    }
+    .verify-icon.mis { background: var(--warn); color: #fff; box-shadow: 0 0 48px rgba(255, 122, 92, 0.32); }
+    .verify-label {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700; font-size: 32px; letter-spacing: 0.3em; color: var(--fg);
+    }
+    .verify-canonical {
+      font-family: 'Noto Serif SC', serif; font-weight: 500;
+      font-size: 22px; color: var(--fg-2); line-height: 1.6;
+      letter-spacing: 0.04em; word-break: break-all;
+    }
+    .verify-msg {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--warn); letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .verify-diff-row {
+      display: grid; grid-template-columns: 100px 1fr;
+      gap: 16px; align-items: baseline;
+    }
+    .verify-diff-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted); letter-spacing: 0.22em; text-transform: uppercase;
+    }
+    .verify-diff-text {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 22px; line-height: 1.5; color: var(--fg-2);
+      letter-spacing: 0.04em; word-break: break-all;
+    }
+    .verify-diff-text .diff-char {
+      color: var(--accent); font-weight: 700;
+      border-bottom: 2px solid var(--accent); padding: 0 2px;
+    }
+    .sublabel {
+      display: block; font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted); letter-spacing: 0.2em;
+      text-transform: uppercase; margin-top: 16px; margin-bottom: 6px;
+    }
+    .verify-num-input { font-size: 28px !important; }
+
+    /* ── BATCH ───────────────────────────────────────── */
+    .batch-textarea.over-limit { border-color: var(--warn); }
+    .batch-count-over { color: var(--warn); }
+    .batch-list {
+      max-height: 480px; overflow-y: auto;
+      margin: 16px 0; display: flex; flex-direction: column; gap: 4px;
+    }
+    .batch-row {
+      display: grid; grid-template-columns: 60px 110px 20px 1fr 36px;
+      gap: 10px; align-items: center; padding: 12px;
+      border-radius: 10px; background: var(--surface);
+      border: 1px solid var(--hairline); font-size: 14px;
+    }
+    .batch-row.failed { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+    .batch-row.failed .batch-dst { color: var(--warn); }
+    .batch-idx {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted); letter-spacing: 0.12em;
+    }
+    .batch-src { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--fg-2); }
+    .batch-arrow { font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+    .batch-dst {
+      font-family: 'Noto Serif SC', serif; font-size: 15px;
+      color: var(--fg); letter-spacing: 0.04em; word-break: break-all;
+    }
+    .batch-copy {
+      background: transparent; border: 1px solid var(--hairline-strong);
+      border-radius: 6px; color: var(--fg-2); cursor: pointer;
+      font-size: 14px; width: 32px; height: 28px; transition: all 0.2s;
+    }
+    .batch-copy:hover:not(:disabled) { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .batch-copy:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── PLACEHOLDER ─────────────────────────────────── */
+    .placeholder-msg {
+      padding: 64px 32px; text-align: center;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      color: var(--muted); font-size: 18px; letter-spacing: -0.01em;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────── */
+    .footer {
+      text-align: center; padding: 32px 0;
+      border-top: 1px solid var(--hairline);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted-2); letter-spacing: 0.12em;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────── */
+    @media (max-width: 780px) {
+      .batch-row { grid-template-columns: 40px 90px 16px 1fr 28px; gap: 6px; font-size: 12px; }
+      .workspace { padding: 0 12px 32px; }
+      .container { padding: 0 12px; }
+    }
+
+    /* ── EXAMPLES TABLE (forward tab) ────────────────── */
+    .examples-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .examples-table th, .examples-table td {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 1px solid var(--hairline); font-family: 'JetBrains Mono', monospace;
+    }
+    .examples-table th { font-weight: 500; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    .examples-table td:last-child { font-family: 'Noto Serif SC', serif; letter-spacing: 0.04em; font-size: 14px; }
   </style>
 </head>
-<body class="bg-neutral font-inter min-h-screen flex flex-col">
-  <header class="bg-white shadow-sm sticky top-0 z-10">
-    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <div class="flex items-center space-x-2">
-        <i class="fa fa-calculator text-primary text-2xl"></i>
-        <h1 class="text-xl md:text-2xl font-bold text-gray-800">人民币大写转换工具</h1>
+<body>
+  <div class="container">
+    <!-- NAV -->
+    <nav class="top-nav">
+      <div class="nav-left">
+        <div class="nav-mark">¥</div>
+        <div class="nav-title">RMB Capital <small>人民币大写转换</small></div>
       </div>
-      <nav>
-        <ul class="flex space-x-6">
-          <li><a href="#" class="text-gray-600 hover:text-primary transition-all-300">首页</a></li>
-          <li><a href="#" class="text-gray-600 hover:text-primary transition-all-300">关于</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <main class="flex-grow container mx-auto px-4 py-8 md:py-16">
-    <div class="max-w-3xl mx-auto">
-      <!-- 介绍卡片 -->
-      <div class="bg-white rounded-xl p-6 mb-8 card-shadow transform hover:translate-y-[-5px] transition-all-300">
-        <h2 class="text-lg md:text-xl font-semibold text-gray-800 mb-3">
-          <i class="fa fa-info-circle text-primary mr-2"></i>使用说明
-        </h2>
-        <p class="text-gray-600 leading-relaxed">
-          本工具可将阿拉伯数字表示的人民币金额转换为中文大写形式。
-          支持的金额范围从0到999999999999.99（即从0到近一万亿），精确到小数点后两位。
-          中文大写使用标准的会计写法，适用于财务、合同等正式场合。
-        </p>
-      </div>
-
-      <!-- 转换工具卡片 -->
-      <div id="app" class="bg-white rounded-xl p-6 md:p-8 card-shadow">
-        <div class="mb-6">
-          <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
-            <i class="fa fa-money text-primary mr-2"></i>输入金额（阿拉伯数字）
-          </label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-              ¥
-            </span>
-            <input
-              v-model="amount"
-              @input="validateInput"
-              type="text"
-              id="amount"
-              class="w-full pl-8 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300 outline-none"
-              placeholder="请输入金额，例如：1234.56"
-            >
-            <button
-              @click="clearInput"
-              v-show="amount.length > 0"
-              type="button"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 transition-all-300"
-            >
-              <i class="fa fa-times-circle"></i>
-            </button>
-          </div>
-          <p v-if="errorMessage" class="mt-2 text-sm text-red-500">
-            <i class="fa fa-exclamation-circle mr-1"></i>{{ errorMessage }}
-          </p>
+      <div class="nav-right">
+        <a href="/docs" class="docs-link">DOCS ↗</a>
+        <div class="theme-toggle" @click="toggleTheme" role="button" tabindex="0">
+          <span :class="{ active: theme === 'dark' }">☾</span>
+          <span :class="{ active: theme === 'light' }">☀</span>
         </div>
+      </div>
+    </nav>
 
-        <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            <i class="fa fa-font text-primary mr-2"></i>中文大写结果
-          </label>
-          <div class="relative">
-            <textarea
-              v-model="result"
-              rows="3"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300 outline-none resize-none"
-              placeholder="转换结果将显示在这里"
-              readonly
-            ></textarea>
-            <button
-              @click="copyResult"
-              :class="copyButtonClass"
-              type="button"
-              class="absolute top-2 right-2 px-3 py-1 text-xs font-medium rounded-md transition-all-300"
-            >
-              <i class="fa fa-clipboard mr-1"></i>{{ copyButtonText }}
-            </button>
+    <!-- HERO -->
+    <header class="hero">
+      <h1>人民币 <em>大写</em></h1>
+      <p>将阿拉伯数字转换为标准中文大写金额，支持转写、还原、校验与批量处理四种模式</p>
+    </header>
+
+    <!-- MODE TABS -->
+    <nav class="mode-tabs reveal r3" role="tablist" aria-label="模式切换">
+      <span class="mode-indicator" :style="{ transform: 'translateX(' + tabIndex * 100 + '%)' }"></span>
+      <button v-for="(t, i) in tabs" :key="t.key" role="tab"
+        :class="['mode-tab', { active: activeTab === t.key }]"
+        :aria-selected="activeTab === t.key"
+        @click="activeTab = t.key">
+        <span class="mode-zh">{{ t.zh }}</span>
+        <span class="mode-en">{{ t.en }}</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="app">
+    <!-- FORWARD TAB -->
+    <section v-if="activeTab === 'forward'" class="workspace">
+      <div class="panel result-panel">
+        <div class="panel-head">
+          <div class="label">OUTPUT · <b>中文大写</b></div>
+          <span class="chip" :class="{ ok: result }">
+            <span class="d"></span>{{ result ? 'OK' : 'AWAITING' }}
+          </span>
+        </div>
+        <div class="result-canvas">
+          <div v-if="result" class="result-number">{{ result }}</div>
+          <div v-else class="result-empty">
+            <div class="phrase">Enter a number. <b>Get the Chinese capitals.</b></div>
+            <div class="hint">↳ 输入金额会自动开启转换</div>
           </div>
         </div>
-
-        <div class="flex justify-center">
-          <button
-            @click="convert"
-            :disabled="isConverting || !isValid"
-            class="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all-300 flex items-center justify-center"
-          >
-            <i class="fa fa-exchange mr-2"></i>
-            <span v-if="!isConverting">转换</span>
-            <span v-else>
-              <i class="fa fa-spinner fa-spin mr-2"></i>转换中...
-            </span>
+        <div class="result-foot">
+          <div class="result-stats">
+            <div class="stat"><span class="k">Stamp</span><span class="v">{{ resultStamp || '— · —' }}</span></div>
+          </div>
+          <button class="copy-btn" :class="{ copied: copied }" :disabled="!result" @click="copyResult">
+            <span>{{ copied ? 'Copied to clipboard' : 'Copy' }}</span>
+            <span class="arrow">{{ copied ? '✓' : '→' }}</span>
           </button>
         </div>
       </div>
 
-      <!-- 示例卡片 -->
-      <div class="bg-white rounded-xl p-6 mt-8 card-shadow">
-        <h2 class="text-lg md:text-xl font-semibold text-gray-800 mb-4">
-          <i class="fa fa-lightbulb-o text-secondary mr-2"></i>使用示例
-        </h2>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">阿拉伯数字</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">中文大写</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1234.56</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">壹仟贰佰叁拾肆圆伍角陆分</td>
-              </tr>
-              <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1000.00</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">壹仟圆整</td>
-              </tr>
-              <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">100000000.00</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">壹亿圆整</td>
-              </tr>
-              <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">10010010.01</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">壹仟零壹万零壹拾圆零壹分</td>
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="label">INPUT · <b>阿拉伯数字</b></div>
+            <span class="chip" :class="{ live: amount.length > 0 }">
+              <span class="d"></span>{{ amount.length > 0 ? 'READY' : 'IDLE' }}
+            </span>
+          </div>
+          <div class="input-wrap">
+            <span class="currency">¥</span>
+            <input v-model="amount" @input="onAmountInput" type="text" inputmode="decimal"
+              placeholder="0.00" autocomplete="off">
+          </div>
+          <div class="input-meta">
+            <span v-if="errorMessage" class="err">⚠ {{ errorMessage }}</span>
+            <span v-else>0 至 999,999,999,999.99 · 支持负数</span>
+            <span>F.1</span>
+          </div>
+          <button class="convert-btn" @click="convert" :disabled="isConverting || !isValid">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+              <span class="label-en">Transcribe Now</span>
+              <span>{{ isConverting ? '转写中…' : '转 写' }}</span>
+            </div>
+            <span class="icon">
+              <span v-if="isConverting" class="spinner"></span>
+              <span v-else>↗</span>
+            </span>
+          </button>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="label">参考 · <b>示例</b></div>
+          </div>
+          <table class="examples-table">
+            <thead><tr><th>数字</th><th>大写</th></tr></thead>
+            <tbody>
+              <tr v-for="ex in examples" :key="ex.num">
+                <td>{{ ex.num }}</td>
+                <td>{{ ex.zh }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  </main>
+    </section>
 
-  <footer class="bg-gray-800 text-white py-8">
-    <div class="container mx-auto px-4">
-      <div class="flex flex-col md:flex-row justify-between items-center">
-        <div class="mb-4 md:mb-0">
-          <div class="flex items-center space-x-2 mb-2">
-            <i class="fa fa-calculator text-primary text-xl"></i>
-            <span class="text-lg font-semibold">人民币大写转换工具</span>
+    <!-- REVERSE TAB -->
+    <section v-else-if="activeTab === 'reverse'" class="workspace">
+      <div class="panel result-panel">
+        <div class="panel-head">
+          <div class="label">OUTPUT · <b>阿拉伯数字</b></div>
+          <span class="chip" :class="{ ok: reverseResult }">
+            <span class="d"></span>{{ reverseResult ? 'PARSED' : 'AWAITING' }}
+          </span>
+        </div>
+        <div class="result-canvas">
+          <div v-if="reverseResult" class="reverse-number">¥ {{ reverseResult }}</div>
+          <div v-else class="result-empty">
+            <div class="phrase">Paste Chinese capitals. <b>Get the figure back.</b></div>
+            <div class="hint">↳ 接受 圆/元 · 整/正 任一写法</div>
           </div>
-          <p class="text-gray-400 text-sm">准确、快速的金额转换服务</p>
         </div>
-        <div class="flex space-x-6">
-          <a href="https://github.com/12ain" class="text-gray-400 hover:text-white transition-all-300">
-            <i class="fa fa-github text-xl"></i>
-          </a>
-          <a href="#" class="text-gray-400 hover:text-white transition-all-300">
-            <i class="fa fa-linkedin text-xl"></i>
-          </a>
+        <div class="result-foot">
+          <div class="result-stats">
+            <div class="stat"><span class="k">Stamp</span><span class="v">{{ reverseStamp || '— · —' }}</span></div>
+          </div>
+          <button class="copy-btn" :class="{ copied: reverseCopied }" :disabled="!reverseResult" @click="copyReverse">
+            <span>{{ reverseCopied ? 'Copied to clipboard' : 'Copy number' }}</span>
+            <span class="arrow">{{ reverseCopied ? '✓' : '→' }}</span>
+          </button>
         </div>
       </div>
-      <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
-        © 2025 人民币大写转换工具 | 保留所有权利
+
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="label">INPUT · <b>中文大写</b></div>
+            <span class="chip" :class="{ live: reverseInput.length > 0 }">
+              <span class="d"></span>{{ reverseInput.length > 0 ? 'READY' : 'IDLE' }}
+            </span>
+          </div>
+          <textarea v-model="reverseInput" class="reverse-textarea" rows="4"
+            placeholder="例：壹仟贰佰叁拾肆圆伍角陆分"></textarea>
+          <div class="input-meta">
+            <span v-if="reverseError" class="err">⚠ {{ reverseError }}</span>
+            <span v-else>支持 圆 / 元 · 整 / 正 · 负数前缀</span>
+            <span>F.0</span>
+          </div>
+          <button class="convert-btn" @click="reverseConvert" :disabled="reverseConverting || !reverseInput.trim()">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+              <span class="label-en">Parse Now</span>
+              <span>{{ reverseConverting ? '还原中…' : '还 原' }}</span>
+            </div>
+            <span class="icon">
+              <span v-if="reverseConverting" class="spinner"></span>
+              <span v-else>↩</span>
+            </span>
+          </button>
+        </div>
       </div>
+    </section>
+
+    <!-- VERIFY TAB -->
+    <section v-else-if="activeTab === 'verify'" class="workspace">
+      <div class="panel result-panel">
+        <div class="panel-head">
+          <div class="label">VERDICT · <b>校验结论</b></div>
+          <span class="chip" :class="{ ok: verifyResult && verifyResult.match }">
+            <span class="d"></span>
+            {{ verifyResult ? (verifyResult.match ? 'MATCH' : 'MISMATCH') : 'AWAITING' }}
+          </span>
+        </div>
+        <div class="result-canvas">
+          <div v-if="!verifyResult" class="result-empty">
+            <div class="phrase">Submit both. <b>See if they agree.</b></div>
+            <div class="hint">↳ 系统会计算并对比，定位首个差异字</div>
+          </div>
+          <div v-else-if="verifyResult.match" class="verify-match">
+            <div class="verify-icon">✓</div>
+            <div class="verify-label">M A T C H</div>
+            <div class="verify-canonical">{{ verifyResult.expected }}</div>
+          </div>
+          <div v-else class="verify-mismatch">
+            <div class="verify-icon mis">✗</div>
+            <div class="verify-label">M I S M A T C H</div>
+            <div v-if="verifyResult.message" class="verify-msg">{{ verifyResult.message }}</div>
+            <div class="verify-diff-row">
+              <span class="verify-diff-label">你 输 入 的</span>
+              <div class="verify-diff-text">
+                <span v-for="(ch, i) in verifyChinese" :key="'a' + i"
+                  :class="{ 'diff-char': i === verifyResult.diffAt }">{{ ch }}</span>
+              </div>
+            </div>
+            <div class="verify-diff-row">
+              <span class="verify-diff-label">系 统 计 算</span>
+              <div class="verify-diff-text">
+                <span v-for="(ch, i) in verifyResult.expected" :key="'b' + i"
+                  :class="{ 'diff-char': i === verifyResult.diffAt }">{{ ch }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="label">INPUT · <b>双向输入</b></div>
+            <span class="chip" :class="{ live: verifyAmount && verifyChinese }">
+              <span class="d"></span>{{ (verifyAmount && verifyChinese) ? 'READY' : 'IDLE' }}
+            </span>
+          </div>
+          <label class="sublabel">阿拉伯数字</label>
+          <div class="input-wrap">
+            <span class="currency">¥</span>
+            <input v-model="verifyAmount" type="text" inputmode="decimal"
+              placeholder="0.00" autocomplete="off" class="verify-num-input">
+          </div>
+          <label class="sublabel">中文大写</label>
+          <textarea v-model="verifyChinese" class="reverse-textarea" rows="3"
+            placeholder="例：壹仟贰佰叁拾肆圆伍角陆分"></textarea>
+          <div class="input-meta">
+            <span v-if="verifyError" class="err">⚠ {{ verifyError }}</span>
+            <span v-else>两栏均需填写</span>
+            <span>F.2</span>
+          </div>
+          <button class="convert-btn" @click="verifyRun" :disabled="verifyConverting || !verifyAmount || !verifyChinese">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+              <span class="label-en">Cross-check Now</span>
+              <span>{{ verifyConverting ? '校验中…' : '校 验' }}</span>
+            </div>
+            <span class="icon">
+              <span v-if="verifyConverting" class="spinner"></span>
+              <span v-else>⇄</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BATCH TAB -->
+    <section v-else-if="activeTab === 'batch'" class="workspace">
+      <div class="panel result-panel">
+        <div class="panel-head">
+          <div class="label">OUTPUT · <b>批量结果</b></div>
+          <span class="chip" :class="{ ok: batchResults.length > 0 }">
+            <span class="d"></span>
+            {{ batchValidCount }} valid · {{ batchErrorCount }} errors
+          </span>
+        </div>
+        <div class="batch-list" v-if="batchResults.length">
+          <div v-for="(row, i) in batchResults" :key="i" class="batch-row" :class="{ failed: row.error }">
+            <span class="batch-idx">#{{ String(i+1).padStart(3,'0') }}</span>
+            <span class="batch-src">¥ {{ row.amount }}</span>
+            <span class="batch-arrow">→</span>
+            <span class="batch-dst">{{ row.chinese || row.message || row.error }}</span>
+            <button class="batch-copy" @click="copyOneBatch(row)" :disabled="!row.chinese" title="复制本行">⧉</button>
+          </div>
+        </div>
+        <div v-else class="result-empty" style="padding: 24px 0;">
+          <div class="phrase">Paste many. <b>Get them all back.</b></div>
+          <div class="hint">↳ 每行一个金额，最多 200 条</div>
+        </div>
+        <div class="result-foot" v-if="batchResults.length">
+          <div class="result-stats">
+            <div class="stat"><span class="k">Total</span><span class="v">{{ batchResults.length }}</span></div>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button class="copy-btn" @click="copyAllBatchTSV" :disabled="!batchValidCount">
+              <span>Copy TSV</span><span class="arrow">⧉</span>
+            </button>
+            <button class="copy-btn" @click="exportBatchCSV" :disabled="!batchValidCount">
+              <span>Export CSV</span><span class="arrow">↓</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="label">INPUT · <b>多行金额</b></div>
+            <span class="chip" :class="{ live: batchLineCount > 0 && batchLineCount <= 200, ok: batchLineCount > 200 ? false : batchLineCount > 0 }">
+              <span class="d"></span>
+              <span :class="{ 'batch-count-over': batchLineCount > 200 }">{{ batchLineCount }} / 200</span>
+            </span>
+          </div>
+          <textarea v-model="batchInput" class="reverse-textarea batch-textarea"
+            :class="{ 'over-limit': batchLineCount > 200 }" rows="10"
+            placeholder="每行一个金额&#10;例：&#10;1234.56&#10;1000&#10;-50.25"></textarea>
+          <div class="input-meta">
+            <span v-if="batchLineCount > 200" class="err">⚠ 已粘贴 {{ batchLineCount }} 条，请删除 {{ batchLineCount - 200 }} 条后再继续</span>
+            <span v-else-if="batchError" class="err">⚠ {{ batchError }}</span>
+            <span v-else>每行解析为一条独立金额</span>
+            <span>F.M</span>
+          </div>
+          <button class="convert-btn" @click="batchRun" :disabled="batchConverting || batchLineCount === 0 || batchLineCount > 200">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+              <span class="label-en">Transcribe {{ batchLineCount }} entries</span>
+              <span>{{ batchConverting ? '批量转写中…' : '批 量 转 写' }}</span>
+            </div>
+            <span class="icon">
+              <span v-if="batchConverting" class="spinner"></span>
+              <span v-else>↗</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="container">
+    <div class="footer">
+      <span>RMB Capital · v1.0 · </span>
+      <span>{{ todayStr }}</span>
     </div>
-  </footer>
+  </div>
 
   <script>
     const app = Vue.createApp({
       data() {
         return {
+          tabs: [
+            { key: 'forward', zh: '转 写', en: 'convert' },
+            { key: 'reverse', zh: '还 原', en: 'reverse' },
+            { key: 'verify',  zh: '校 验', en: 'verify'  },
+            { key: 'batch',   zh: '批 量', en: 'batch'   },
+          ],
+          activeTab: 'forward',
+          // forward state
           amount: '',
           result: '',
+          resultKey: 0,
+          resultStamp: '',
           errorMessage: '',
           isValid: false,
           isConverting: false,
-          copyButtonText: '复制结果',
-          copyButtonClass: 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-        }
+          copied: false,
+          // reverse state
+          reverseInput: '',
+          reverseResult: '',
+          reverseStamp: '',
+          reverseError: '',
+          reverseConverting: false,
+          reverseCopied: false,
+          // verify state
+          verifyAmount: '',
+          verifyChinese: '',
+          verifyResult: null,
+          verifyConverting: false,
+          verifyError: '',
+          // batch state
+          batchInput: '',
+          batchResults: [],
+          batchConverting: false,
+          batchError: '',
+          // shared
+          theme: document.documentElement.getAttribute('data-theme') || 'dark',
+          examples: [
+            { num: '1234.56',      zh: '壹仟贰佰叁拾肆圆伍角陆分' },
+            { num: '1000.00',      zh: '壹仟圆整' },
+            { num: '100000000.00', zh: '壹亿圆整' },
+            { num: '10010010.01',  zh: '壹仟零壹万零壹拾圆零壹分' },
+          ],
+          todayStr: '',
+        };
+      },
+      computed: {
+        tabIndex() {
+          return this.tabs.findIndex(t => t.key === this.activeTab);
+        },
+        batchLineCount() {
+          if (!this.batchInput) return 0;
+          return this.batchInput.split('\n').filter(l => l.trim().length > 0).length;
+        },
+        batchValidCount() {
+          return this.batchResults.filter(r => !r.error).length;
+        },
+        batchErrorCount() {
+          return this.batchResults.filter(r => r.error).length;
+        },
       },
       methods: {
-        // 验证输入
-        validateInput() {
-          // 清除错误消息
+        toggleTheme() {
+          this.theme = this.theme === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', this.theme);
+          localStorage.setItem('theme', this.theme);
+        },
+        stampNow() {
+          return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        },
+
+        // Forward
+        onAmountInput() {
           this.errorMessage = '';
-
-          // 移除非数字和非小数点字符
-          this.amount = this.amount.replace(/[^0-9.]/g, '');
-
-          // 验证小数点数量
+          this.amount = this.amount.replace(/[^0-9.-]/g, '');
           const dotCount = (this.amount.match(/\./g) || []).length;
-          if (dotCount > 1) {
-            this.amount = this.amount.replace(/\.$/, '');
+          if (dotCount > 1) { this.amount = this.amount.replace(/\.$/, ''); }
+          if (this.amount.startsWith('-')) {
+            const rest = this.amount.slice(1).replace(/-/g, '');
+            this.amount = '-' + rest;
           }
-
-          // 验证小数点后位数
-          if (this.amount.includes('.')) {
-            const parts = this.amount.split('.');
-            if (parts[1].length > 2) {
-              parts[1] = parts[1].substring(0, 2);
-              this.amount = parts.join('.');
-            }
-          }
-
-          // 验证金额是否有效
           if (this.amount) {
-            // 检查是否为有效的数字格式
-            const isValidNumber = /^\d+(\.\d{1,2})?$/.test(this.amount);
-            if (!isValidNumber) {
+            this.isValid = /^-?\d+(\.\d{1,2})?$/.test(this.amount);
+            if (!this.isValid) {
               this.errorMessage = '请输入有效的金额格式';
-              this.isValid = false;
               return;
             }
-
-            // 检查金额是否超出范围（最大支持到999999999999.99）
-            const maxValue = 999999999999.99;
-            if (parseFloat(this.amount) > maxValue) {
-              this.errorMessage = '金额超出范围（最大支持到999999999999.99）';
-              this.isValid = false;
-              return;
-            }
-
             this.isValid = true;
           } else {
             this.isValid = false;
           }
         },
-
-        // 清除输入
-        clearInput() {
-          this.amount = '';
-          this.result = '';
-          this.errorMessage = '';
-          this.isValid = false;
-          this.copyButtonText = '复制结果';
-          this.copyButtonClass = 'bg-gray-200 hover:bg-gray-300 text-gray-700';
-        },
-
-        // 转换金额
         async convert() {
           if (!this.isValid || this.isConverting) return;
-
           this.isConverting = true;
           this.errorMessage = '';
-
+          this.result = '';
           try {
-            const response = await axios.post('/api/convert', {
-              amount: this.amount
-            });
-
-            this.result = response.data.chinese;
-          } catch (error) {
-            if (error.response) {
-              this.errorMessage = error.response.data.error || '转换失败，请重试';
-            } else {
-              this.errorMessage = '网络错误，请检查连接';
-            }
+            const res = await axios.post('/api/convert', { amount: this.amount });
+            this.result = res.data.chinese;
+            this.resultStamp = this.stampNow();
+            this.copied = false;
+          } catch (e) {
+            this.errorMessage = e.response?.data?.message || e.response?.data?.error || '转换失败';
           } finally {
             this.isConverting = false;
           }
         },
-
-        // 复制结果
         copyResult() {
           if (!this.result) return;
+          navigator.clipboard.writeText(this.result).then(() => {
+            this.copied = true;
+            setTimeout(() => { this.copied = false; }, 2200);
+          }).catch(() => { this.errorMessage = '复制失败，请手动选择'; });
+        },
 
-          navigator.clipboard.writeText(this.result)
-            .then(() => {
-              this.copyButtonText = '已复制!';
-              this.copyButtonClass = 'bg-green-100 text-green-700';
+        // Reverse
+        async reverseConvert() {
+          const v = this.reverseInput.trim();
+          if (!v || this.reverseConverting) return;
+          this.reverseConverting = true;
+          this.reverseError = '';
+          try {
+            const res = await axios.post('/api/convert/reverse', { chinese: v });
+            this.reverseResult = res.data.amount;
+            this.reverseStamp = this.stampNow();
+            this.reverseCopied = false;
+          } catch (e) {
+            this.reverseError = e.response?.data?.message || e.response?.data?.error || '解析失败';
+            this.reverseResult = '';
+          } finally {
+            this.reverseConverting = false;
+          }
+        },
+        copyReverse() {
+          if (!this.reverseResult) return;
+          navigator.clipboard.writeText(this.reverseResult).then(() => {
+            this.reverseCopied = true;
+            setTimeout(() => { this.reverseCopied = false; }, 2200);
+          }).catch(() => { this.reverseError = '复制失败，请手动选择'; });
+        },
 
-              setTimeout(() => {
-                this.copyButtonText = '复制结果';
-                this.copyButtonClass = 'bg-gray-200 hover:bg-gray-300 text-gray-700';
-              }, 2000);
-            })
-            .catch(err => {
-              this.errorMessage = '复制失败，请手动复制';
-              console.error('复制失败:', err);
+        // Verify
+        async verifyRun() {
+          if (!this.verifyAmount || !this.verifyChinese || this.verifyConverting) return;
+          this.verifyConverting = true;
+          this.verifyError = '';
+          this.verifyResult = null;
+          try {
+            const res = await axios.post('/api/convert/verify', {
+              amount: this.verifyAmount,
+              chinese: this.verifyChinese,
             });
-        }
-      }
+            this.verifyResult = res.data;
+          } catch (e) {
+            this.verifyError = e.response?.data?.message || e.response?.data?.error || '校验失败';
+          } finally {
+            this.verifyConverting = false;
+          }
+        },
+
+        // Batch
+        async batchRun() {
+          const amounts = this.batchInput.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+          if (amounts.length === 0 || amounts.length > 200 || this.batchConverting) return;
+          this.batchConverting = true;
+          this.batchError = '';
+          try {
+            const res = await axios.post('/api/convert/batch', { amounts });
+            this.batchResults = res.data.results;
+          } catch (e) {
+            this.batchError = e.response?.data?.message || e.response?.data?.error || '批量转写失败';
+            this.batchResults = [];
+          } finally {
+            this.batchConverting = false;
+          }
+        },
+        copyOneBatch(row) {
+          if (!row.chinese) return;
+          navigator.clipboard.writeText(row.chinese).catch(() => {});
+        },
+        copyAllBatchTSV() {
+          const tsv = this.batchResults
+            .filter(r => r.chinese)
+            .map(r => r.amount + '\t' + r.chinese)
+            .join('\n');
+          navigator.clipboard.writeText(tsv).catch(() => {});
+        },
+        exportBatchCSV() {
+          const header = 'amount,chinese\n';
+          const rows = this.batchResults
+            .filter(r => r.chinese)
+            .map(r => '"' + r.amount + '","' + r.chinese.replace(/"/g, '""') + '"')
+            .join('\n');
+          const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'rmb-batch-' + Date.now() + '.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+      },
+      mounted() {
+        const now = new Date();
+        this.todayStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+      },
     });
 
     app.mount('#app');
