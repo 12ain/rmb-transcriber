@@ -74,20 +74,7 @@
 
 ### 4.1 文件组织
 
-为避免 `main.go` 膨胀，拆分如下：
-
-```
-main.go              ← 路由与启动
-converter.go         ← ConvertToChinese（保留并扩展支持负数、零边界回归修复）
-parser.go            ← ParseChinese（反向解析）
-verify.go            ← Verify（组合上面两者 + diff 定位）
-batch.go             ← Batch（薄包装，单条失败隔离）
-main_test.go         ← 表驱动单元测试
-converter_test.go    ← 同上
-parser_test.go       ← 同上
-verify_test.go       ← 同上
-batch_test.go        ← 同上
-```
+文件布局以 **§12 项目结构优化** 为准：所有转换核心逻辑下沉到 `internal/converter/` 子包（`forward.go`、`reverse.go`、`verify.go`、`batch.go`、`errors.go` 及对应测试文件），根包 `main.go` 仅保留薄 HTTP 适配层。
 
 ### 4.2 反向解析：正则切段
 
@@ -274,9 +261,9 @@ textarea 每次 `input` 按 `\n` 切行（过滤空行）计数：
 
 ## 9. 部署变更
 
-- Dockerfile 增加 COPY：`static/docs.html`、`static/swagger.html`、`static/openapi.json`。
+- Dockerfile **移除**单独 COPY static 目录的步骤 —— 静态资源已通过 `//go:embed static/*` 编入二进制。
 - 无新增运行时依赖。
-- 镜像体积变化预计 < 50KB。
+- 镜像体积变化：因 static 嵌入二进制，最终镜像略增（HTML/CSS/JSON 合计 < 80KB），但层数减少；整体复杂度下降。
 
 ## 10. 已确认的关键取舍
 
@@ -292,19 +279,96 @@ textarea 每次 `input` 按 `\n` 切行（过滤空行）计数：
 | 批量超限处理 | 客户端粘贴时立即提示 + 禁用提交 |
 | 反向解析方式 | 正则切段 |
 | 前端测试框架 | 不引入 |
+| Go 包布局 | 根 `main.go` + `internal/converter/` 子包 |
+| 静态资源 | `//go:embed` 编入二进制 |
+| CSS 共享 | 抽 `static/shared/theme.css` 两页共用 |
 | 多币种、历史、导出、API Key | 全部留 v2 |
 
 ## 11. 文件清单（实现阶段产物）
 
+详见 **§12.5 变更范围**。简表如下：
+
 新增：
 
-- `converter.go`、`parser.go`、`verify.go`、`batch.go`
-- `*_test.go`（每个核心模块一份）
+- `internal/converter/` 整包（`forward.go`、`reverse.go`、`verify.go`、`batch.go`、`errors.go` 及对应 `*_test.go`）
 - `static/docs.html`、`static/swagger.html`、`static/openapi.json`
+- `static/shared/theme.css`
 
 修改：
 
-- `main.go`（路由扩展，转换逻辑移出）
-- `static/index.html`（Tab 切换 + 4 模式工作区 + 批量预校验）
-- `Dockerfile`（COPY 新增静态文件）
+- `main.go`（重构为薄 HTTP 适配层 + 路由 + `go:embed` 挂载）
+- `static/index.html`（Tab 切换 + 4 模式工作区 + 批量预校验 + 改用 `<link>` 引用共享 CSS）
+- `Dockerfile`（移除单独 COPY static 的步骤，因已 embed）
 - `README.md`（功能与端点更新）
+
+迁移：
+
+- 现有 `ConvertToChinese` 函数与 `digits` / `units` 常量 → `internal/converter/forward.go`
+
+## 12. 项目结构优化
+
+### 12.1 目录与包重组
+
+当前 Go 逻辑全部挤在根包的 `main.go`，静态资源只有一个 `index.html`。本期一并整理：
+
+```
+rmb-uppercase-converter/
+├── main.go                          # HTTP 路由与启动（薄层）
+├── internal/
+│   └── converter/                   # 转换核心逻辑包
+│       ├── forward.go               # 数字 → 大写
+│       ├── reverse.go               # 大写 → 数字（正则切段）
+│       ├── verify.go                # 双向校验 + diff 定位
+│       ├── batch.go                 # 批量包装（单条失败隔离）
+│       ├── errors.go                # 错误码常量 + ConverterError 类型
+│       ├── forward_test.go
+│       ├── reverse_test.go
+│       ├── verify_test.go
+│       └── batch_test.go
+├── static/                          # go:embed 嵌入二进制
+│   ├── index.html                   # 主应用（4 个 Tab）
+│   ├── docs.html                    # API 文档页
+│   ├── swagger.html                 # Swagger UI 容器
+│   ├── openapi.json                 # OpenAPI 3.1 规范
+│   └── shared/
+│       └── theme.css                # 主题 CSS 变量（深色/浅色）
+├── docs/
+│   ├── deployment.md
+│   └── superpowers/specs/
+│       └── 2026-06-04-v1-enrichment-design.md
+├── Dockerfile
+├── go.mod
+├── go.sum
+└── README.md
+```
+
+### 12.2 关键决策
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| Go 包布局 | 根 `main.go` + `internal/converter/` 子包 | 单二进制小项目无需引入 `cmd/server/`；`internal/converter` 形成清晰的 API 边界，便于聚焦测试与未来复用 |
+| 静态资源 | `//go:embed static/*` 用 `embed.FS` 编入二进制 | 编译产物是单文件可执行；Docker 镜像不再需要 COPY 静态目录；部署一致性更高 |
+| CSS 共享 | 抽 `static/shared/theme.css` 用 `<link>` 引用 | index.html、docs.html 共用同一份主题变量，避免漂移 |
+| 主题 bootstrap 脚本 | 仍内联各页 `<head>` | 必须 paint 前同步执行，外部脚本会有 FOUC |
+| 错误码 | `internal/converter/errors.go` 单点定义并导出 | handler 层引用同一组常量字符串，避免硬编码漂移 |
+
+### 12.3 `main.go` 职责收窄
+
+重构后 `main.go` 只做三件事：
+
+1. 创建 gin 引擎，用 `embed.FS` 挂载 `/static`、`/docs`、`/docs/spec` 静态路径
+2. 注册四个 API 路由（`/api/convert` 等）并转发到薄 handler；handler 解 JSON、调 `converter` 包、写响应
+3. 启动 `:8080` 监听
+
+业务逻辑（转换、解析、校验、批量）全部下沉到 `internal/converter`，主包不再持有任何金额相关的字符串常量。
+
+### 12.4 与 §4.1 的关系
+
+本节**取代** §4.1 的扁平文件清单：不只是把文件拆出来，而是把转换逻辑整体放进 `internal/converter` 子包，让主包成为真正薄的 HTTP 适配层。测试文件随源码一起搬进同一包内（Go 惯例）。
+
+### 12.5 变更范围
+
+- **新增**：`internal/converter/` 整包；`static/shared/theme.css`；`static/docs.html`、`static/swagger.html`、`static/openapi.json`
+- **修改**：`main.go` 重构为薄 handler + `go:embed`；`static/index.html` 改用 `<link>` 引用共享 CSS、加入 Tab 与四模式工作区；`Dockerfile` 移除单独 COPY static 的步骤
+- **迁移**：现有 `ConvertToChinese` 函数与 `digits` / `units` 常量 → `internal/converter/forward.go`
+- **删除**：根包内原有的转换逻辑与单位字符串常量（迁移后移除）
