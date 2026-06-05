@@ -1,8 +1,8 @@
-# 人民币大写转换工具
+# RMB Transcriber
 
 ## 项目概述
 
-使用 Golang + Gin + Vue 3 实现的人民币大写转换工具。支持 4 种模式：数字转大写、大写还原数字、双向校验、批量转换。
+使用 Golang + Gin + Vue 3 实现的人民币大写转写工具。支持 4 种模式：数字转大写、大写还原数字、双向校验、批量转换。
 
 ## 技术栈
 
@@ -54,6 +54,6 @@ OpenAPI 规范：`GET /openapi.json` · Swagger UI：`/docs/spec`。
 ## 构建
 
 ```bash
-docker build -t rmb-server .
-docker run --rm -p 8080:8080 rmb-server
+docker build -t rmb-transcriber .
+docker run --rm -p 8080:8080 rmb-transcriber
 ```

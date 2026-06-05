@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.21 + Gin v1.10. Vue 3 + axios (CDN). Swagger UI 5 (CDN). No new Go dependencies.
 
-**Module path:** `github.com/12ain/rmb-uppercase-converter` (verified from `go.mod`).
+**Module path:** `github.com/12ain/rmb-transcriber` (verified from `go.mod`).
 
 **Spec:** `docs/superpowers/specs/2026-06-04-v1-enrichment-design.md` (read before starting; this plan implements that spec verbatim).
 
@@ -1152,7 +1152,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/12ain/rmb-uppercase-converter/internal/converter"
+	"github.com/12ain/rmb-transcriber/internal/converter"
 	"github.com/gin-gonic/gin"
 )
 
@@ -2242,7 +2242,7 @@ Replace the contents of `static/openapi.json` with:
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "RMB Capital · Numeral Transcriber API",
+    "title": "RMB Transcriber · Numeral Transcriber API",
     "version": "1.0.0",
     "description": "Convert between Arabic numerals and Chinese capitalised numerals (人民币大写) for invoices, contracts, and bank instruments."
   },
@@ -2476,7 +2476,7 @@ git commit -m "feat(docs): author OpenAPI 3.1 spec for all 4 endpoints"
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RMB Capital · OpenAPI Reference</title>
+  <title>RMB Transcriber · OpenAPI Reference</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
   <style>
     body { margin: 0; background: #fafafa; }
@@ -2549,7 +2549,7 @@ Create `static/docs.html` with the framing structure:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RMB Capital · API Reference</title>
+  <title>RMB Transcriber · API Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@300;400;500&family=Noto+Serif+SC:wght@500&display=swap" rel="stylesheet">
@@ -2732,7 +2732,7 @@ Create `static/docs.html` with the framing structure:
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <div class="side-logo"><span class="mark">¥</span><b>RMB Capital · Docs</b></div>
+      <div class="side-logo"><span class="mark">¥</span><b>RMB Transcriber · Docs</b></div>
       <div class="side-section">Guide</div>
       <a class="side-link" href="#overview">Overview</a>
       <a class="side-link" href="#errors">Error codes</a>
@@ -3082,13 +3082,13 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /out/rmb-server .
+RUN CGO_ENABLED=0 go build -o /out/rmb-transcriber .
 
 FROM alpine:3.19
 WORKDIR /app
-COPY --from=build /out/rmb-server /app/rmb-server
+COPY --from=build /out/rmb-transcriber /app/rmb-transcriber
 EXPOSE 8080
-ENTRYPOINT ["/app/rmb-server"]
+ENTRYPOINT ["/app/rmb-transcriber"]
 ```
 
 Key point: there is **no** `COPY static/ ./static/` line in the runtime stage — the static files live inside the binary via `go:embed`.

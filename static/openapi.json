@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "RMB Capital · Numeral Transcriber API",
+    "title": "RMB Transcriber API",
     "version": "1.0.0",
     "description": "Convert between Arabic numerals and Chinese capitalised numerals (人民币大写) for invoices, contracts, and bank instruments."
   },

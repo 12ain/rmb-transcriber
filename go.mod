@@ -1,4 +1,4 @@
-module github.com/12ain/rmb-uppercase-converter
+module github.com/12ain/rmb-transcriber
 
 go 1.21.4
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RMB Capital · 人民币大写转换</title>
+  <title>RMB Transcriber · 人民币大写转写</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@300;400;500&family=Noto+Serif+SC:wght@500&display=swap" rel="stylesheet">
@@ -407,12 +407,13 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div id="app">
+    <div class="container">
     <!-- NAV -->
     <nav class="top-nav">
       <div class="nav-left">
         <div class="nav-mark">¥</div>
-        <div class="nav-title">RMB Capital <small>人民币大写转换</small></div>
+        <div class="nav-title">RMB Transcriber <small>人民币大写转写</small></div>
       </div>
       <div class="nav-right">
         <a href="/docs" class="docs-link">DOCS ↗</a>
@@ -442,7 +443,6 @@
     </nav>
   </div>
 
-  <div id="app">
     <!-- FORWARD TAB -->
     <section v-if="activeTab === 'forward'" class="workspace">
       <div class="panel result-panel">
@@ -719,13 +719,13 @@
         </div>
       </div>
     </section>
-  </div>
 
   <div class="container">
     <div class="footer">
-      <span>RMB Capital · v1.0 · </span>
+      <span>RMB Transcriber · v1.0 · </span>
       <span>{{ todayStr }}</span>
     </div>
+  </div>
   </div>
 
   <script>

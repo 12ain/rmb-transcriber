@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/12ain/rmb-uppercase-converter/internal/converter"
+	"github.com/12ain/rmb-transcriber/internal/converter"
 	"github.com/gin-gonic/gin"
 )
 

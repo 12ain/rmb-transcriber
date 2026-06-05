@@ -312,7 +312,7 @@ textarea 每次 `input` 按 `\n` 切行（过滤空行）计数：
 当前 Go 逻辑全部挤在根包的 `main.go`，静态资源只有一个 `index.html`。本期一并整理：
 
 ```
-rmb-uppercase-converter/
+rmb-transcriber/
 ├── main.go                          # HTTP 路由与启动（薄层）
 ├── internal/
 │   └── converter/                   # 转换核心逻辑包

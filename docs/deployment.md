@@ -1,4 +1,4 @@
-# 人民币大写转换工具部署文档
+# RMB Transcriber 部署文档
 
 ## 环境要求
 
@@ -12,18 +12,18 @@
 
 1. **克隆项目仓库**
    ```bash
-   git clone https://github.com/12ain/rmb-uppercase-converter.git
-   cd rmb-uppercase-converter
+   git clone https://github.com/12ain/rmb-transcriber.git
+   cd rmb-transcriber
    ```
 
 2. **构建Docker镜像**
    ```bash
-   docker build -t rmb-uppercase-converter .
+   docker build -t rmb-transcriber .
    ```
 
 3. **运行Docker容器**
    ```bash
-   docker run -d -p 8080:8080 --name rmb-converter rmb-uppercase-converter
+   docker run -d -p 8080:8080 --name rmb-transcriber rmb-transcriber
    ```
 
 4. **验证部署**
@@ -35,7 +35,7 @@
    ```yaml
    version: '3'
    services:
-     rmb-converter:
+     rmb-transcriber:
        build: .
        ports:
          - "8080:8080"
@@ -58,7 +58,7 @@
 
 1. 修改Docker运行命令中的端口映射：
    ```bash
-   docker run -d -p 新端口:8080 --name rmb-converter rmb-uppercase-converter
+   docker run -d -p 新端口:8080 --name rmb-transcriber rmb-transcriber
    ```
 
 2. 或修改docker-compose.yml中的端口配置：
@@ -93,20 +93,20 @@ server {
 
 1. **拉取最新代码**
    ```bash
-   cd rmb-uppercase-converter
+   cd rmb-transcriber
    git pull
    ```
 
 2. **重建Docker镜像**
    ```bash
-   docker build -t rmb-uppercase-converter .
+   docker build -t rmb-transcriber .
    ```
 
 3. **重启容器**
    ```bash
-   docker stop rmb-converter
-   docker rm rmb-converter
-   docker run -d -p 8080:8080 --name rmb-converter rmb-uppercase-converter
+   docker stop rmb-transcriber
+   docker rm rmb-transcriber
+   docker run -d -p 8080:8080 --name rmb-transcriber rmb-transcriber
    ```
 
 ## 故障排除
@@ -118,12 +118,12 @@ server {
 
 2. **查看容器日志**
    ```bash
-   docker logs rmb-converter
+   docker logs rmb-transcriber
    ```
 
 3. **进入容器内部**
    ```bash
-   docker exec -it rmb-converter sh
+   docker exec -it rmb-transcriber sh
    ```
 
 如果遇到问题，可以检查端口占用情况、Docker网络配置或查看应用日志以获取更多信息。
